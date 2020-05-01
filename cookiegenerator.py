@@ -17,15 +17,22 @@ from selenium.common.exceptions import TimeoutException
 
 from selenium import webdriver
 
-import pickle
-
-#proxy_urls = environ["192.41.71.221,3128"].split(",")
-
+#target URL
 url = 'https://www.roblox.com/account/signupredir'
 
-def initDriver():
+#Proxies to avoid captcha and IP blocking
+data = open("proxies/proxy1.txt") 
+proxies = []
+for line in data:
+    proxies.append(line)
+
+#init driver with the options and a proxy if specified
+def initDriver(useProxy = False):
     try:
         driverOptions = webdriver.ChromeOptions()
+        if(useProxy == True):
+            proxy = random.choice(proxies)
+            driverOptions.add_argument('--proxy-server=%s' % proxy)
         driverOptions.add_argument("--incognito")
         # driverOptions.add_argument("--headless")
         driver = webdriver.Chrome("drivers/chromedriver", options = driverOptions)
@@ -33,11 +40,13 @@ def initDriver():
     except Exception as e:
         print("Failed to initialize driver with error: "+str(e))
 
+#generate a random string with length from 8-15
 def randomString():
     letters = string.ascii_letters + string.digits
     return ''.join(random.choice(letters) for i in range(8+int(random.random()*7.0)))
 
 
+#extract the cookie(name) and its value from dict
 def extractCookie(driver, name, value):
     print("Extracting cookie")
     try:
@@ -48,6 +57,7 @@ def extractCookie(driver, name, value):
         print("Failed to extract with error: "+str(e))
     
 
+#fill up sign up info and wait until logged in
 def fillSignUpInfo(driver,user = randomString(),passw = randomString()):
     
     driver.get("{}".format(url))
@@ -80,7 +90,8 @@ def fillSignUpInfo(driver,user = randomString(),passw = randomString()):
     except Exception as e:
         print("Timed out after 40 seconds while signing in with error: "+str(e)) 
         
-        
+
+#multithreading bot class that runs the above functions in a loop to generate cookies        
 class botThread (threading.Thread):     
     def __init__(self, threadID):
         threading.Thread.__init__(self)
@@ -92,9 +103,10 @@ class botThread (threading.Thread):
             try:
                 if(stopthreads == 1):
                     print("Keyboard Interrupted on thread: "+str(self.threadID))
+                    f.close()
                     break
                 else:
-                    driver = initDriver()
+                    driver = initDriver(True)
                     fillSignUpInfo(driver)
                     cookie = extractCookie(driver, '.ROBLOSECURITY', 'value')
                     f.write(cookie+"\n")
@@ -102,8 +114,8 @@ class botThread (threading.Thread):
                     time.sleep(15)
             except Exception as e:
                 print("Error while looping through run: "+str(e))
-                break
                 f.close()
+                break
             
         
 
