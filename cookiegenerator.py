@@ -21,7 +21,7 @@ from selenium import webdriver
 url = 'https://www.roblox.com/account/signupredir'
 
 #Proxies to avoid captcha and IP blocking
-data = open("proxies/proxy1.txt") 
+data = open("proxies/proxy1.txt")
 proxies = []
 for line in data:
     proxies.append(line)
@@ -55,44 +55,46 @@ def extractCookie(driver, name, value):
         return val
     except Exception as e:
         print("Failed to extract with error: "+str(e))
-    
+
 
 #fill up sign up info and wait until logged in
 def fillSignUpInfo(driver,user = randomString(),passw = randomString()):
-    
+
     driver.get("{}".format(url))
     try:
         WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.ID, 'signup-button')))
         print("Signup started ")
     except Exception as e:
         print("Timed out at signup after 30 seconds, signup error: "+str(e))
-    
+
     driver.find_element_by_xpath("//*[@id='MonthDropdown']/option[2]").click()
     driver.find_element_by_xpath("//*[@id='DayDropdown']/option[2]").click()
     driver.find_element_by_xpath("//*[@id='YearDropdown']/option[22]").click()
-    
+
     try:
         driver.find_element_by_xpath("//*[@id='CookieLawAccept']").click()
     except:
         None
-    
+
     driver.find_element_by_xpath("//*[@id='signup-username']").send_keys(user)
     driver.find_element_by_xpath("//*[@id='signup-password']").send_keys(passw)
 
-    
+
     driver.find_element_by_xpath("//*[@id='FemaleButton']").click()
-    
+
     driver.find_element_by_xpath("//*[@id='signup-button']").click()
-    
+
     try:
         WebDriverWait(driver, 40).until(EC.presence_of_element_located((By.ID, 'navbar-robux')))
         print("Logged in Succesfully with new account...")
+        return 1
     except Exception as e:
-        print("Timed out after 40 seconds while signing in with error: "+str(e)) 
-        
+        print("Timed out after 40 seconds while signing in with error: "+str(e))
+        return 0
 
-#multithreading bot class that runs the above functions in a loop to generate cookies        
-class botThread (threading.Thread):     
+
+#multithreading bot class that runs the above functions in a loop to generate cookies
+class botThread (threading.Thread):
     def __init__(self, threadID):
         threading.Thread.__init__(self)
         self.threadID = threadID
@@ -100,24 +102,23 @@ class botThread (threading.Thread):
         f = open("cookies/cookie_batch_"+randomString()+".txt","w+")
         global stopthreads
         while True:
-            try:
-                if(stopthreads == 1):
-                    print("Keyboard Interrupted on thread: "+str(self.threadID))
-                    f.close()
-                    break
-                else:
-                    driver = initDriver(True)
-                    fillSignUpInfo(driver)
-                    cookie = extractCookie(driver, '.ROBLOSECURITY', 'value')
-                    f.write(cookie+"\n")
-                    driver.quit()
-                    time.sleep(15)
-            except Exception as e:
-                print("Error while looping through run: "+str(e))
+            cookie = 0
+            signupcompleted = 0
+            if(stopthreads == 1):
+                print("Keyboard Interrupted on thread: "+str(self.threadID))
                 f.close()
                 break
-            
-        
+            else:
+                driver = initDriver(True)
+                signupcompleted = fillSignUpInfo(driver)
+                if(signupcompleted != 0):
+                    cookie = extractCookie(driver, '.ROBLOSECURITY', 'value')
+                if(cookie != 0):
+                    f.write(cookie+"\n")
+                driver.quit()
+                time.sleep(15)
+
+
 
 if __name__ == "__main__":
     global stopthreads
@@ -130,5 +131,3 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print('Keyboard Interrupted')
         stopthreads = 1
-
-    
