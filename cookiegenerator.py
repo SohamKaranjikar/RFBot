@@ -21,7 +21,7 @@ from selenium import webdriver
 url = 'https://www.roblox.com/account/signupredir'
 
 #Proxies to avoid captcha and IP blocking
-data = open("proxies/proxy1.txt")
+data = open("proxies/proxy2.txt")
 proxies = []
 for line in data:
     proxies.append(line)
@@ -62,7 +62,7 @@ def fillSignUpInfo(driver,user = randomString(),passw = randomString()):
 
     driver.get("{}".format(url))
     try:
-        WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.ID, 'signup-button')))
+        WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.ID, 'MonthDropdown')))
         print("Signup started ")
     except Exception as e:
         print("Timed out at signup after 30 seconds, signup error: "+str(e))
@@ -116,7 +116,7 @@ class botThread (threading.Thread):
                 if(cookie != 0):
                     f.write(cookie+"\n")
                 driver.quit()
-                time.sleep(15)
+                time.sleep(1)
 
 
 
@@ -126,6 +126,12 @@ if __name__ == "__main__":
         stopthreads = 0
         bot1 = botThread(1)
         bot1.start()
+        # bot2 = botThread(2)
+        # bot2.start()
+        # bot3 = botThread(3)
+        # bot3.start()
+        # bot4 = botThread(4)
+        # bot4.start()
         while True:
             None
     except KeyboardInterrupt:
