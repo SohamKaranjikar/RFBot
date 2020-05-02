@@ -21,7 +21,7 @@ from selenium import webdriver
 url = 'https://www.roblox.com/account/signupredir'
 
 #Proxies to avoid captcha and IP blocking
-data = open("proxies/proxy2.txt")
+data = open("proxies/proxy1.txt")
 proxies = []
 for line in data:
     proxies.append(line)
@@ -58,8 +58,13 @@ def extractCookie(driver, name, value):
 
 
 #fill up sign up info and wait until logged in
-def fillSignUpInfo(driver,user = randomString(),passw = randomString()):
+def fillSignUpInfo(driver,user = "",passw = ""):
 
+    if(user == ""):
+        user = randomString()
+
+    if(passw == ""):
+        passw = randomString()
     driver.get("{}".format(url))
     try:
         WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.ID, 'MonthDropdown')))
@@ -126,12 +131,12 @@ if __name__ == "__main__":
         stopthreads = 0
         bot1 = botThread(1)
         bot1.start()
-        # bot2 = botThread(2)
-        # bot2.start()
-        # bot3 = botThread(3)
-        # bot3.start()
-        # bot4 = botThread(4)
-        # bot4.start()
+        bot2 = botThread(2)
+        bot2.start()
+        bot3 = botThread(3)
+        bot3.start()
+        bot4 = botThread(4)
+        bot4.start()
         while True:
             None
     except KeyboardInterrupt:
