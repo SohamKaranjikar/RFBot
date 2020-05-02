@@ -19,6 +19,10 @@ from selenium import webdriver
 
 from browsermobproxy import Server
 
+import json
+
+from anticaptchaofficial.funcaptchaproxyless import *
+
 #target URL
 url = 'https://www.roblox.com/account/signupredir'
 
@@ -98,8 +102,10 @@ def fillSignUpInfo(driver,user = "",passw = ""):
         WebDriverWait(driver, 8).until(EC.presence_of_element_located((By.ID, 'fc-iframe-wrap')))
         print("Encountered Captcha")
         # driver.switch_to.frame(driver.find_element_by_id("fc-iframe-wrap"))
+        return "Captcha"
     except:
         print("Did not encounter a captcha, maybe error finding captcha: ")
+        return "Nocaptcha"
 
     time.sleep(1)
 
@@ -122,7 +128,7 @@ def fillSignUpInfo(driver,user = "",passw = ""):
 
     # time.sleep(1)
     print(driver.find_element_by_id("verification-token").get_attribute('value'))
-    return [driver.find_element_by_id("verification-token").get_attribute('value'),user,passw]
+    #return [driver.find_element_by_id("verification-token").get_attribute('value'),user,passw]
 
     try:
         WebDriverWait(driver, 40).until(EC.presence_of_element_located((By.ID, 'navbar-robux')))
@@ -136,6 +142,7 @@ class botThread (threading.Thread):
     def __init__(self, threadID):
         threading.Thread.__init__(self)
         self.threadID = threadID
+        self.solver = funcaptchaProxyless()
     def run(self):
         f = open("cookies/cookie_batch_"+randomString()+".txt","w+")
         global stopthreads
@@ -147,41 +154,53 @@ class botThread (threading.Thread):
             else:
                 driver = initDriver(False)
                 signupvals = fillSignUpInfo(driver)
-                #cookie = extractCookie(driver, '.ROBLOSECURITY', 'value')
-                #f.write(cookie+"\n")
-                #.quit()
-                #time.sleep(15)
-                try:
-                    with requests.Session() as (c):
-                        #c.xsrf_token = input("token: ")
-                        c.xsrf_token = ""
+                if(signupvals = "Nocaptcha"):
+                    cookie = extractCookie(driver, '.ROBLOSECURITY', 'value')
+                elif(signupvals = "Captcha"):
+                    try:
+                        with requests.Session() as (c):
+                            #c.xsrf_token = input("token: ")
+                            c.xsrf_token = ""
+                            signupvals=["",randomString(),randomString()]
 
-                        headers = {"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36",
-                                   "X-CSRF-TOKEN":c.xsrf_token}
-                        req = c.post("https://assetgame.roblox.com/game/report-event?name=WebsiteSignUp_Attempt",
-                               allow_redirects=False,headers=headers) # This sends a request to roblox and gets a valid XSRF token
-                        print(req.text)
-                        try:
-                            c.xsrf_token = req.headers["X-CSRF-TOKEN"] # Also here is where i set the XSRF Token as the one returned from url
+                            req = c.post(
+                                url="https://auth.roblox.com/v2/signup",
+                                headers={"Origin": "https://www.roblox.com", "Referer": "https://www.roblox.com/account/signupredir", "X-CSRF-TOKEN": c.xsrf_token, "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36"},
+                                data={"username":signupvals[1],"password":signupvals[2],"birthday":"01 Jan 2000","gender":"3","isTosAgreementBoxChecked":"true","context":"MultiverseSignupForm","displayAvatarV2":"false","displayContextV2":"false","captchaToken":signupvals[0],"captchaProvider":"PROVIDER_ARKOSE_LABS"}
+                            )
+                            print(req.text)
+                            try:
+                                c.xsrf_token = req.headers["X-CSRF-TOKEN"] # Also here is where i set the XSRF Token as the one returned from url
+                                print(c.xsrf_token)
+                            except Exception as e:
+                                print("Error: "+str(e))
+                            self.solver.set_verbose(1)
+                            self.solver.set_key("682169c1074bc756ccc84fd47989d86f")
+                            self.solver.set_website_url("https://www.roblox.com/account/signupredir")
+                            self.solver.set_website_key("A2A14B1D-1AF3-C791-9BBC-EE33CC7A0A6F")
+                            token = self.solver.solve_and_return_solution()
+                            if token != 0:
+                                print("result token: "+token)
+                            else:
+                                print("task finished with error "+self.solver.error_code)
+                            #token = input("captcha key: ")
+                            signupvals[0] = token
+
+                            headerss={"Origin": "https://www.roblox.com", "Referer": "https://www.roblox.com/account/signupredir", "X-CSRF-TOKEN": c.xsrf_token, "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36", "Content-Type": "application/json"}
+                            resp = c.post(
+                                url="https://auth.roblox.com/v2/signup",
+                                headers=headerss,
+                                data=json.dumps({"username":signupvals[1],"password":signupvals[2],"birthday":"01 Jan 2000","gender":"3","isTosAgreementBoxChecked":"true","context":"MultiverseSignupForm","displayAvatarV2":"false","displayContextV2":"false","captchaToken":signupvals[0],"captchaProvider":"PROVIDER_ARKOSE_LABS"})
+                            )
+                            print(signupvals[0])
+                            # print(resp.text)
                             print(c.xsrf_token)
-                        except Exception as e:
-                            print("Error: "+str(e))
-                            c.xsrf_token = input("token: ")
-
-                        signupvals[0] = input("key: ")
-                        signupvals[0] = signupvals[0]+"r=us-east-1|metabgclr=transparent|guitextcolor=%23474747|maintxtclr=%23b8b8b8|metaiconclr=transparent|meta=6|lang=en|pk=A2A14B1D-1AF3-C791-9BBC-EE33CC7A0A6F|at=40|rid=75|ht=1|atp=2|cdn_url=https://cdn.arkoselabs.com/fc|lurl=https://audio-us-east-1.arkoselabs.com|surl=https://roblox-api.arkoselabs.com"
-
-
-                        resp = c.post(
-                            url="https://auth.roblox.com/v2/signup",
-                            headers={"Origin": "https://www.roblox.com", "Referer": "https://www.roblox.com/account/signupredir", "X-CSRF-TOKEN": c.xsrf_token, "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36"},
-                            data={"username":signupvals[1],"password":signupvals[2],"birthday":"01 Jan 2000","gender":"3","isTosAgreementBoxChecked":"true","context":"MultiverseSignupForm","displayAvatarV2":"false","displayContextV2":"false","captchaToken":signupvals[0],"captchaProvider":"PROVIDER_ARKOSE_LABS"}
-                        )
-                        print(signupvals[0])
-                        print(resp.text)
-                        print(c.xsrf_token)
-                except Exception as e:
-                    print(e)
+                    except Exception as e:
+                        print(e)
+                #f.write(cookie+"\n")
+                driver.quit()
+                #time.sleep(15)
+                time.sleep(1)
                 while True: None
 
         f.close()
