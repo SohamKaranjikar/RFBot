@@ -15,7 +15,7 @@ from selenium.webdriver.common.by import By
 
 from selenium.common.exceptions import TimeoutException
 
-from selenium import webdriver
+from seleniumrequests import Chrome
 
 from browsermobproxy import Server
 
@@ -39,13 +39,7 @@ except Exception as e:
 #init driver with the options and a proxy if specified
 def initDriver(useProxy = False):
     try:
-        driverOptions = webdriver.ChromeOptions()
-        if(useProxy == True):
-            proxy = random.choice(proxies)
-            driverOptions.add_argument('--proxy-server=%s' % proxy)
-        driverOptions.add_argument("--incognito")
-        #driverOptions.add_argument("--headless")
-        driver = webdriver.Chrome("drivers/chromedriver", options = driverOptions)
+        driver = Chrome("drivers/chromedriver")
         return driver
     except Exception as e:
         print("Failed to initialize driver with error: "+str(e))
@@ -102,7 +96,8 @@ def fillSignUpInfo(driver,user = "",passw = ""):
         WebDriverWait(driver, 8).until(EC.presence_of_element_located((By.ID, 'fc-iframe-wrap')))
         print("Encountered Captcha")
         # driver.switch_to.frame(driver.find_element_by_id("fc-iframe-wrap"))
-        return "Captcha"
+        print(driver.find_element_by_id("verification-token").get_attribute('value'))
+        return [driver.find_element_by_id("verification-token").get_attribute('value'),user,passw]
     except:
         print("Did not encounter a captcha, maybe error finding captcha: ")
         return "Nocaptcha"
@@ -127,7 +122,6 @@ def fillSignUpInfo(driver,user = "",passw = ""):
     # time.sleep(1)
 
     # time.sleep(1)
-    print(driver.find_element_by_id("verification-token").get_attribute('value'))
     #return [driver.find_element_by_id("verification-token").get_attribute('value'),user,passw]
 
     try:
@@ -154,24 +148,21 @@ class botThread (threading.Thread):
             else:
                 driver = initDriver(False)
                 signupvals = fillSignUpInfo(driver)
-                if(signupvals = "Nocaptcha"):
+                if(signupvals == "Nocaptcha"):
                     cookie = extractCookie(driver, '.ROBLOSECURITY', 'value')
-                elif(signupvals = "Captcha"):
+                elif(signupvals != "Nocaptcha"):
                     try:
-                        with requests.Session() as (c):
-                            #c.xsrf_token = input("token: ")
-                            c.xsrf_token = ""
-                            signupvals=["",randomString(),randomString()]
+                            xsrf_token = ""
 
-                            req = c.post(
+                            req = driver.request('POST',
                                 url="https://auth.roblox.com/v2/signup",
-                                headers={"Origin": "https://www.roblox.com", "Referer": "https://www.roblox.com/account/signupredir", "X-CSRF-TOKEN": c.xsrf_token, "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36"},
+                                headers={"Origin": "https://www.roblox.com", "Referer": "https://www.roblox.com/account/signupredir", "X-CSRF-TOKEN": xsrf_token, "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36"},
                                 data={"username":signupvals[1],"password":signupvals[2],"birthday":"01 Jan 2000","gender":"3","isTosAgreementBoxChecked":"true","context":"MultiverseSignupForm","displayAvatarV2":"false","displayContextV2":"false","captchaToken":signupvals[0],"captchaProvider":"PROVIDER_ARKOSE_LABS"}
                             )
                             print(req.text)
                             try:
-                                c.xsrf_token = req.headers["X-CSRF-TOKEN"] # Also here is where i set the XSRF Token as the one returned from url
-                                print(c.xsrf_token)
+                                xsrf_token = req.headers["X-CSRF-TOKEN"] # Also here is where i set the XSRF Token as the one returned from url
+                                print(xsrf_token)
                             except Exception as e:
                                 print("Error: "+str(e))
                             self.solver.set_verbose(1)
@@ -183,18 +174,17 @@ class botThread (threading.Thread):
                                 print("result token: "+token)
                             else:
                                 print("task finished with error "+self.solver.error_code)
-                            #token = input("captcha key: ")
+                            # token = input("captcha key: ")
                             signupvals[0] = token
 
-                            headerss={"Origin": "https://www.roblox.com", "Referer": "https://www.roblox.com/account/signupredir", "X-CSRF-TOKEN": c.xsrf_token, "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36", "Content-Type": "application/json"}
-                            resp = c.post(
+                            headerss={"Origin": "https://www.roblox.com", "Referer": "https://www.roblox.com/account/signupredir", "X-CSRF-TOKEN": xsrf_token, "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36", "Content-Type": "application/json"}
+                            resp = driver.request("POST",
                                 url="https://auth.roblox.com/v2/signup",
                                 headers=headerss,
                                 data=json.dumps({"username":signupvals[1],"password":signupvals[2],"birthday":"01 Jan 2000","gender":"3","isTosAgreementBoxChecked":"true","context":"MultiverseSignupForm","displayAvatarV2":"false","displayContextV2":"false","captchaToken":signupvals[0],"captchaProvider":"PROVIDER_ARKOSE_LABS"})
                             )
                             print(signupvals[0])
-                            # print(resp.text)
-                            print(c.xsrf_token)
+                            print(resp.text)
                     except Exception as e:
                         print(e)
                 #f.write(cookie+"\n")
